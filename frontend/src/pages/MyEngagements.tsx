@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useWallet } from '../lib/wallet'
 import { listEngagementsFor, getEngagement } from '../lib/surety'
 import { markAllSeen } from '../lib/activity'
+import { mapWithConcurrency } from '../lib/concurrency'
 import { useNetwork } from '../lib/network'
 import type { Engagement, StatusValue } from '../lib/types'
 import { STATUS_LABEL } from '../lib/types'
@@ -36,7 +37,7 @@ export function MyEngagements() {
     ;(async () => {
       try {
         const ids = await listEngagementsFor(address)
-        const items = await Promise.all(ids.map((id) => getEngagement(id)))
+        const items = await mapWithConcurrency(ids, 1, getEngagement)
         markAllSeen(address, items)
         if (!cancelled) setEngagements(items.sort((a, b) => b.id - a.id))
       } catch (err: any) {

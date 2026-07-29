@@ -8,6 +8,7 @@ import { IconMenu, IconClose, IconHome, IconList, IconPlus, IconBook, IconChartB
 import { useWallet } from '../lib/wallet'
 import { listEngagementsFor, getEngagement } from '../lib/surety'
 import { hasUnseenChanges } from '../lib/activity'
+import { mapWithConcurrency } from '../lib/concurrency'
 import { useNetwork } from '../lib/network'
 
 const ACTIVITY_POLL_MS = 60_000
@@ -48,7 +49,7 @@ export function Layout() {
     async function check() {
       try {
         const ids = await listEngagementsFor(address!)
-        const engagements = await Promise.all(ids.map((id) => getEngagement(id)))
+        const engagements = await mapWithConcurrency(ids, 1, getEngagement)
         if (!cancelled) setHasActivity(hasUnseenChanges(address!, engagements))
       } catch {
         // network hiccup - next poll retries, no need to surface this as an error

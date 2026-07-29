@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatEther } from 'viem'
 import { listAllIds, getEngagement } from '../lib/surety'
+import { mapWithConcurrency } from '../lib/concurrency'
 import { NETWORKS as NETWORK_REGISTRY, useNetwork } from '../lib/network'
 import type { Engagement, StatusValue } from '../lib/types'
 import { STATUS_LABEL } from '../lib/types'
@@ -31,7 +32,7 @@ export function Stats() {
     ;(async () => {
       try {
         const ids = await listAllIds()
-        const items = await Promise.all(ids.map((id) => getEngagement(id)))
+        const items = await mapWithConcurrency(ids, 1, getEngagement)
         if (!cancelled) setEngagements(items)
       } catch (err: any) {
         if (!cancelled) setError(err?.message ?? 'Failed to load stats')
