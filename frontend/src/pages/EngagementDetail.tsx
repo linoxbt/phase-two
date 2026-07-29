@@ -18,7 +18,7 @@ import { Textarea } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Skeleton } from '../components/ui/Skeleton'
 import { IconScale } from '../components/icons'
-import { formatGen, formatUnixDate, isPast, shortAddress } from '../lib/format'
+import { formatGen, formatUnixDate, isPast, shortAddress, splitTitle } from '../lib/format'
 
 const TIMELINE: StatusValue[] = ['created', 'submitted', 'released']
 
@@ -88,13 +88,20 @@ export function EngagementDetail() {
     setPendingTx(null)
   }
 
+  const { title, description } = splitTitle(eng.deliverable_spec)
+
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">Engagement #{eng.id}</h1>
+      <p className="label-mono mb-1 text-xs text-ink-soft/70">Engagement #{eng.id}</p>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{title}</h1>
         <StatusBadge status={eng.status} />
       </div>
-      <p className="mb-8 whitespace-pre-wrap text-ink-soft">{eng.deliverable_spec}</p>
+      <p className="mb-4 text-sm text-ink-soft">
+        <span className="font-mono text-ink">{shortAddress(eng.depositor)}</span> (depositor) is paying{' '}
+        <span className="font-mono text-ink">{shortAddress(eng.counterparty)}</span> (counterparty) to deliver this.
+      </p>
+      {description && <p className="mb-8 whitespace-pre-wrap text-ink-soft">{description}</p>}
 
       <Timeline status={eng.status} />
 

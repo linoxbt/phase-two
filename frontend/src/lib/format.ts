@@ -18,3 +18,13 @@ export function formatUnixDate(unixSeconds: number): string {
 export function isPast(unixSeconds: number): boolean {
   return Date.now() >= unixSeconds * 1000
 }
+
+/** The contract only stores one `deliverable_spec` string - CreateEngagement
+ * writes it as `title\n\ndescription` so lists can show a real title instead
+ * of a truncated wall of text. Older engagements with no blank-line split
+ * just show their full spec as the title, so this stays backward compatible. */
+export function splitTitle(spec: string): { title: string; description: string } {
+  const idx = spec.indexOf('\n\n')
+  if (idx === -1) return { title: spec.trim(), description: '' }
+  return { title: spec.slice(0, idx).trim(), description: spec.slice(idx + 2).trim() }
+}

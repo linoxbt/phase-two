@@ -10,7 +10,7 @@ import { StatusBadge } from '../components/StatusBadge'
 import { Card } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
 import { AnimatedCounter } from '../components/ui/AnimatedCounter'
-import { formatGen, formatUnixDate, shortAddress } from '../lib/format'
+import { formatGen, formatUnixDate, shortAddress, splitTitle } from '../lib/format'
 
 const STATUS_ORDER: StatusValue[] = ['created', 'submitted', 'released', 'rejected', 'disputed', 'expired']
 
@@ -123,14 +123,16 @@ export function Stats() {
               <ul className="space-y-3">
                 {[...(engagements ?? [])]
                   .sort((a, b) => b.id - a.id)
-                  .map((eng) => (
+                  .map((eng) => {
+                    const { title } = splitTitle(eng.deliverable_spec)
+                    return (
                     <li key={eng.id}>
                       <Link to={`/app/engagement/${eng.id}`}>
                         <Card interactive className="p-5">
                           <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
                               <p className="truncate text-lg font-semibold text-ink">
-                                #{eng.id} - {eng.deliverable_spec}
+                                #{eng.id} - {title}
                               </p>
                               <p className="mt-1 text-xs text-ink-soft">
                                 {formatGen(eng.amount)} &middot; deadline {formatUnixDate(eng.deadline)}
@@ -145,7 +147,7 @@ export function Stats() {
                         </Card>
                       </Link>
                     </li>
-                  ))}
+                  )})}
               </ul>
             )}
           </div>

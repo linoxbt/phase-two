@@ -14,7 +14,7 @@ import { Input } from '../components/ui/Input'
 import { EmptyState, EmptyIcon } from '../components/ui/EmptyState'
 import { EngagementCardSkeleton } from '../components/ui/Skeleton'
 import { IconArrowRight } from '../components/icons'
-import { formatGen, formatUnixDate, shortAddress } from '../lib/format'
+import { formatGen, formatUnixDate, shortAddress, splitTitle } from '../lib/format'
 
 const STATUS_FILTERS: Array<StatusValue | 'all'> = ['all', 'created', 'submitted', 'released', 'rejected', 'disputed', 'expired']
 
@@ -141,6 +141,7 @@ export function MyEngagements() {
       <ul className="space-y-3">
         {filtered?.map((eng) => {
           const role = eng.depositor.toLowerCase() === address.toLowerCase() ? 'Depositor' : 'Counterparty'
+          const { title } = splitTitle(eng.deliverable_spec)
           return (
             <li key={eng.id}>
               <Link to={`/app/engagement/${eng.id}`}>
@@ -148,10 +149,11 @@ export function MyEngagements() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <p className="truncate text-lg font-semibold text-ink">
-                        #{eng.id} - {eng.deliverable_spec}
+                        #{eng.id} - {title}
                       </p>
                       <p className="mt-1 text-xs text-ink-soft">
-                        {role} &middot; {formatGen(eng.amount)} &middot; deadline {formatUnixDate(eng.deadline)}
+                        You&apos;re the {role} &middot; {formatGen(eng.amount)} &middot; deadline{' '}
+                        {formatUnixDate(eng.deadline)}
                       </p>
                       <p className="mt-1 font-mono text-xs text-ink-soft/70">
                         depositor {shortAddress(eng.depositor)} &middot; counterparty {shortAddress(eng.counterparty)}
