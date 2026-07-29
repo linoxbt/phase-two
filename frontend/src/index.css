@@ -1,0 +1,112 @@
+@import "tailwindcss";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+
+@theme {
+  --font-sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, Consolas, monospace;
+
+  /* Base surfaces - warm cream, not white, not black */
+  --color-cream: #f4f3f0;
+  --color-paper: #ffffff;
+  --color-ink: #131416;
+  --color-ink-soft: #52535a;
+  --color-line: #131416;
+
+  /* Coral accent (primary), anchored at 500 = #fc6432 */
+  --color-coral-50: #fff2ed;
+  --color-coral-100: #ffe1d3;
+  --color-coral-200: #ffc0a3;
+  --color-coral-300: #ff9868;
+  --color-coral-400: #fd7c47;
+  --color-coral-500: #fc6432;
+  --color-coral-600: #e94a17;
+  --color-coral-700: #c23811;
+  --color-coral-800: #9a2e11;
+  --color-coral-900: #7c2a12;
+
+  /* Violet accent (secondary), anchored at 500 = #765bff */
+  --color-violet-50: #f2f0ff;
+  --color-violet-100: #e4e0ff;
+  --color-violet-200: #c9c0ff;
+  --color-violet-300: #a794ff;
+  --color-violet-400: #8f72ff;
+  --color-violet-500: #765bff;
+  --color-violet-600: #5f3ffa;
+  --color-violet-700: #4d2fd6;
+  --color-violet-800: #3f28ab;
+  --color-violet-900: #352589;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+  font-feature-settings: "ss01";
+}
+
+h1, h2, h3, h4 {
+  @apply font-display;
+}
+
+::selection {
+  @apply bg-coral-200 text-ink;
+}
+
+/* Uppercase, letter-spaced monospace label style used on all buttons/chips,
+   matching the reference site's button typography exactly. */
+.label-mono {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
+}
+
+/* Scroll-reveal primitive: elements start hidden+offset, .in-view animates them in. */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-16px) translateX(8px); }
+}
+.animate-float {
+  animation: float 8s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4%, 6%) scale(1.08); }
+}
+.animate-gradient-shift {
+  animation: gradient-shift 14s ease-in-out infinite;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}

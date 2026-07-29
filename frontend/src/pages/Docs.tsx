@@ -1,0 +1,332 @@
+import { useEffect, useState } from 'react'
+import { FAUCET_URL } from '../lib/faucet'
+import { NETWORKS as NETWORK_REGISTRY } from '../lib/network'
+
+const SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'how-it-works', label: 'How it works' },
+  { id: 'concepts', label: 'Key concepts' },
+  { id: 'lifecycle', label: 'Engagement lifecycle' },
+  { id: 'contract', label: 'Contract reference' },
+  { id: 'networks', label: 'Networks' },
+  { id: 'faq', label: 'FAQ' },
+]
+
+// Derived from the same registry the in-app network switcher uses, so this
+// never drifts from what the app actually supports/points at.
+const NETWORK_INFO = [
+  {
+    name: NETWORK_REGISTRY.testnetAsimov.label,
+    chainId: String(NETWORK_REGISTRY.testnetAsimov.chain.id),
+    rpc: NETWORK_REGISTRY.testnetAsimov.chain.rpcUrls.default.http[0],
+    explorer: NETWORK_REGISTRY.testnetAsimov.chain.blockExplorers?.default.url ?? '',
+    contractAddress: NETWORK_REGISTRY.testnetAsimov.contractAddress,
+    note: "GenLayer's current public testnet. Needs testnet GEN for gas.",
+  },
+  {
+    name: NETWORK_REGISTRY.studionet.label,
+    chainId: String(NETWORK_REGISTRY.studionet.chain.id),
+    rpc: NETWORK_REGISTRY.studionet.chain.rpcUrls.default.http[0],
+    explorer: NETWORK_REGISTRY.studionet.chain.blockExplorers?.default.url ?? '',
+    contractAddress: NETWORK_REGISTRY.studionet.contractAddress,
+    note: 'Hosted GenLayer Studio - gasless, no funded account needed.',
+  },
+]
+
+export function Docs() {
+  const [active, setActive] = useState(SECTIONS[0].id)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length > 0) setActive(visible[0].target.id)
+      },
+      { rootMargin: '-15% 0px -70% 0px' },
+    )
+    SECTIONS.forEach((s) => {
+      const el = document.getElementById(s.id)
+      if (el) observer.observe(el)
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mb-10 text-left">
+        <p className="label-mono text-xs text-coral-600">Documentation</p>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">How Phase Two works</h1>
+        <p className="mt-4 max-w-xl text-ink-soft">
+          A reference for the escrow lifecycle, the GenLayer concepts behind judgment, and the contract methods
+          themselves.
+        </p>
+      </div>
+
+      {/* Mobile: horizontal scrolling section strip instead of a sidebar */}
+      <nav className="mb-8 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+        {SECTIONS.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className={`label-mono shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] transition-colors ${
+              active === s.id ? 'border-ink bg-ink text-paper' : 'border-ink/10 text-ink-soft'
+            }`}
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
+
+      <div className="lg:flex lg:items-start lg:gap-16">
+        {/* Desktop: sticky sidebar */}
+        <nav className="hidden lg:sticky lg:top-28 lg:block lg:w-[22%] lg:shrink-0">
+          <ul className="space-y-1 border-l border-ink/8">
+            {SECTIONS.map((s) => (
+              <li key={s.id}>
+                <a
+                  href={`#${s.id}`}
+                  className={`-ml-px block border-l-2 py-1.5 pl-4 text-sm transition-colors ${
+                    active === s.id ? 'border-coral-500 text-ink' : 'border-transparent text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  {s.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="min-w-0 flex-1 space-y-16 lg:w-[78%]">
+          <Section id="overview" title="Overview">
+            <p>
+              Phase Two is an escrow contract for work that can&apos;t be checked by a plain deterministic condition.
+              A depositor locks payment against a plain-English deliverable spec; the counterparty submits live,
+              checkable evidence; a random set of independent GenLayer validators fetch that evidence themselves and
+              judge it against the spec. Funds release automatically on a pass. Either side can dispute or escalate
+              to a protocol-level appeal on disagreement.
+            </p>
+            <p>
+              Nothing about the verdict is trusted from a single party or a single model - every validator
+              re-derives the judgment independently, and the reasoning behind every verdict (including rejections) is
+              stored on-chain permanently.
+            </p>
+          </Section>
+
+          <Section id="how-it-works" title="How it works">
+            <ol className="space-y-6">
+              <Step n={1} title="Create the engagement">
+                The depositor locks the payment, names the counterparty address, sets a deadline, and writes the
+                deliverable spec - the exact criteria validators will judge against later.
+              </Step>
+              <Step n={2} title="Submit the evidence">
+                The counterparty submits one or more evidence URLs (a repo, a live deployment, a document) plus
+                optional notes for the reviewer.
+              </Step>
+              <Step n={3} title="Validators judge live">
+                Anyone can trigger <Code>request_release</Code>. Five independent validators fetch the evidence
+                themselves at judgment time and compare it against the spec - nothing submitted as text is
+                trusted at face value.
+              </Step>
+              <Step n={4} title="Release, or dispute">
+                A pass releases funds to the counterparty immediately. A rejection leaves the deposit in place; either
+                party can raise a dispute with additional evidence and re-trigger judgment, or escalate through
+                GenLayer&apos;s protocol-level appeal.
+              </Step>
+            </ol>
+          </Section>
+
+          <Section id="concepts" title="Key concepts">
+            <dl className="space-y-6">
+              <Concept term="Optimistic Democracy">
+                GenLayer&apos;s consensus model: a random set of validators, each often connected to a different
+                underlying model, independently execute the same judgment task and reach consensus on the result
+                rather than trusting one leader&apos;s output.
+              </Concept>
+              <Concept term="Equivalence Principle">
+                Validators agree on the <em>substance</em> of an answer, not an exact string match - two honest
+                validators evaluating the same evidence rarely phrase their reasoning identically, so consensus is
+                measured on meaning.
+              </Concept>
+              <Concept term="Greyboxing">
+                Because validators run on different, often undisclosed models, adversarial evidence tuned to fool one
+                specific model is unlikely to fool the whole validator set.
+              </Concept>
+              <Concept term="Appeals">
+                A contested verdict can escalate to an expanded validator set at the protocol level - a bonded,
+                on-chain re-evaluation, not a support ticket.
+              </Concept>
+            </dl>
+          </Section>
+
+          <Section id="lifecycle" title="Engagement lifecycle">
+            <p>An engagement moves through a small set of statuses:</p>
+            <ul className="space-y-2">
+              <li>
+                <Code>created</Code> - deposit locked, waiting on the counterparty to submit evidence, or on the
+                deadline to pass.
+              </li>
+              <li>
+                <Code>submitted</Code> - evidence is in; anyone can trigger validator judgment.
+              </li>
+              <li>
+                <Code>released</Code> - validators passed the deliverable; funds paid to the counterparty.
+              </li>
+              <li>
+                <Code>rejected</Code> - validators failed the deliverable; deposit stays locked pending dispute.
+              </li>
+              <li>
+                <Code>disputed</Code> - a party added evidence and re-triggered judgment after a rejection.
+              </li>
+              <li>
+                <Code>expired</Code> - the deadline passed with nothing submitted; deposit refunded to the
+                depositor.
+              </li>
+            </ul>
+          </Section>
+
+          <Section id="contract" title="Contract reference">
+            <p>Public methods on the deployed Intelligent Contract:</p>
+            <div className="space-y-4">
+              <Method name="create_engagement" args="counterparty, deliverable_spec, deadline" note="Write · payable">
+                Locks the sent value as the deposit and opens a new engagement.
+              </Method>
+              <Method name="submit_deliverable" args="engagement_id, evidence_urls, notes" note="Write · counterparty only">
+                Attaches evidence and moves the engagement to <Code>submitted</Code>.
+              </Method>
+              <Method name="request_release" args="engagement_id" note="Write · triggers validator judgment">
+                Runs the validator comparison against the spec; releases or rejects based on consensus.
+              </Method>
+              <Method name="raise_dispute" args="engagement_id, evidence_urls, reason" note="Write · depositor or counterparty">
+                Appends evidence and increments the dispute round after a rejection or release.
+              </Method>
+              <Method name="refund_expired" args="engagement_id" note="Write · after deadline, status created only">
+                Refunds the deposit to the depositor if nothing was ever submitted.
+              </Method>
+              <Method name="get_engagement" args="engagement_id" note="View">
+                Returns the full engagement record.
+              </Method>
+              <Method name="list_engagements_for" args="address" note="View">
+                Returns engagement ids where the address is depositor or counterparty.
+              </Method>
+            </div>
+          </Section>
+
+          <Section id="networks" title="Networks">
+            <p>
+              Phase Two is deployed to both of GenLayer&apos;s real networks at once, and the sidebar&apos;s network
+              switcher picks between them at runtime - no rebuild needed. Each network has its own contract
+              deployment and its own engagement history; switching networks means you&apos;re looking at entirely
+              separate data, not a filtered view of the same data.
+            </p>
+            <div className="space-y-4">
+              {NETWORK_INFO.map((n) => (
+                <div key={n.chainId} className="rounded-xl border border-ink/8 bg-paper p-4">
+                  <p className="font-display text-sm font-semibold text-ink">{n.name}</p>
+                  <p className="mt-2">{n.note}</p>
+                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-ink-soft/70">Chain id</dt>
+                    <dd className="font-mono text-ink">{n.chainId}</dd>
+                    <dt className="text-ink-soft/70">RPC</dt>
+                    <dd className="break-all font-mono text-ink">{n.rpc}</dd>
+                    <dt className="text-ink-soft/70">Explorer</dt>
+                    <dd className="break-all font-mono text-ink">{n.explorer}</dd>
+                    <dt className="text-ink-soft/70">Contract</dt>
+                    <dd className="break-all font-mono text-ink">{n.contractAddress}</dd>
+                  </dl>
+                </div>
+              ))}
+            </div>
+            <p>
+              A ready-to-copy <Code>.env.example</Code> ships in the frontend repo root. Need funds for Asimov
+              Testnet?{' '}
+              <a href={FAUCET_URL} target="_blank" rel="noreferrer" className="text-coral-600 underline hover:text-coral-700">
+                Claim testnet GEN from the faucet
+              </a>{' '}
+              (100 GEN per claim, once every 7 days) - Studio Network is gasless and needs no funding at all.
+            </p>
+          </Section>
+
+          <Section id="faq" title="FAQ">
+            <dl className="space-y-6">
+              <Concept term="What happens if validators disagree with each other?">
+                GenLayer&apos;s consensus mechanism resolves this at the protocol level before a verdict is ever
+                written back to the contract - Phase Two only sees the final agreed-on result.
+              </Concept>
+              <Concept term="Can the counterparty fake the evidence?">
+                Validators fetch the evidence themselves at judgment time rather than trusting submitted text, so a
+                broken link, a private repo, or a page that doesn&apos;t match the claim will surface in the verdict.
+              </Concept>
+              <Concept term="What if the deadline passes with a rejection unresolved?">
+                A rejection freezes the deposit pending dispute - it does not auto-refund. Only an engagement
+                still in <Code>created</Code> status refunds automatically on deadline.
+              </Concept>
+            </dl>
+          </Section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} className="scroll-mt-28 border-t border-ink/8 pt-12 text-left first:border-t-0 first:pt-0">
+      <h2 className="text-2xl font-bold tracking-tight text-ink">{title}</h2>
+      <div className="mt-4 max-w-2xl space-y-4 text-sm leading-relaxed text-ink-soft [&_em]:text-ink [&_em]:not-italic [&_em]:font-medium">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <li className="flex gap-4">
+      <span className="label-mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-ink/10 text-[10px] text-ink-soft">
+        {n}
+      </span>
+      <div>
+        <p className="font-display text-sm font-semibold text-ink">{title}</p>
+        <p className="mt-1">{children}</p>
+      </div>
+    </li>
+  )
+}
+
+function Concept({ term, children }: { term: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="font-display text-sm font-semibold text-ink">{term}</dt>
+      <dd className="mt-1">{children}</dd>
+    </div>
+  )
+}
+
+function Method({
+  name,
+  args,
+  note,
+  children,
+}: {
+  name: string
+  args: string
+  note: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl border border-ink/8 bg-paper p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <code className="font-mono text-sm font-semibold text-ink">
+          {name}
+          <span className="text-ink-soft/60">({args})</span>
+        </code>
+        <span className="label-mono text-[10px] text-coral-600">{note}</span>
+      </div>
+      <p className="mt-2 text-sm">{children}</p>
+    </div>
+  )
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+  return <code className="rounded bg-ink/5 px-1.5 py-0.5 font-mono text-[0.85em] text-ink">{children}</code>
+}
