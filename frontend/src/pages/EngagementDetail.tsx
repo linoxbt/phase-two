@@ -10,7 +10,8 @@ import { useNetwork } from '../lib/network'
 import { markSeen } from '../lib/activity'
 import type { Engagement, StatusValue } from '../lib/types'
 import { StatusBadge } from '../components/StatusBadge'
-import { TxStatus, explorerUrl } from '../components/TxStatus'
+import { TxStatus, explorerUrl, explorerAddressUrl } from '../components/TxStatus'
+import { getContractAddress } from '../lib/genlayer-client'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { Textarea } from '../components/ui/Input'
@@ -99,9 +100,27 @@ export function EngagementDetail() {
 
       <Card className="mt-8 grid grid-cols-2 gap-y-3 p-5 text-sm">
         <dt className="text-ink-soft">Depositor</dt>
-        <dd className="font-mono text-ink">{shortAddress(eng.depositor)}</dd>
+        <dd className="font-mono text-ink">
+          <a
+            href={explorerAddressUrl(eng.depositor)}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-ink/20 hover:text-coral-600 hover:decoration-coral-600"
+          >
+            {shortAddress(eng.depositor)}
+          </a>
+        </dd>
         <dt className="text-ink-soft">Counterparty</dt>
-        <dd className="font-mono text-ink">{shortAddress(eng.counterparty)}</dd>
+        <dd className="font-mono text-ink">
+          <a
+            href={explorerAddressUrl(eng.counterparty)}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-ink/20 hover:text-coral-600 hover:decoration-coral-600"
+          >
+            {shortAddress(eng.counterparty)}
+          </a>
+        </dd>
         <dt className="text-ink-soft">Deposit</dt>
         <dd className="text-ink">{formatGen(eng.amount)}</dd>
         <dt className="text-ink-soft">Deadline</dt>
@@ -110,6 +129,17 @@ export function EngagementDetail() {
         </dd>
         <dt className="text-ink-soft">Dispute round</dt>
         <dd className="text-ink">{eng.dispute_round}</dd>
+        <dt className="text-ink-soft">Contract</dt>
+        <dd className="font-mono text-ink">
+          <a
+            href={explorerAddressUrl(getContractAddress())}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-ink/20 hover:text-coral-600 hover:decoration-coral-600"
+          >
+            {shortAddress(getContractAddress())} &#8599;
+          </a>
+        </dd>
       </Card>
 
       {eng.evidence_urls.length > 0 && (

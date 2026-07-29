@@ -4,7 +4,7 @@ import { WalletButton } from './WalletButton'
 import { Logo, LogoMark } from './Logo'
 import { NetworkBanner } from './NetworkBanner'
 import { NetworkSwitcher } from './NetworkSwitcher'
-import { IconMenu, IconClose, IconHome, IconList, IconPlus, IconBook, IconChartBar, IconSidebar } from './icons'
+import { IconMenu, IconClose, IconList, IconPlus, IconBook, IconChartBar, IconSidebar } from './icons'
 import { useWallet } from '../lib/wallet'
 import { listEngagementsFor, getEngagement } from '../lib/surety'
 import { hasUnseenChanges } from '../lib/activity'
@@ -14,11 +14,10 @@ import { useNetwork } from '../lib/network'
 const ACTIVITY_POLL_MS = 60_000
 
 const NAV_LINKS = [
-  { to: '/', label: 'Overview', icon: IconHome },
+  { to: '/stats', label: 'Transparency', icon: IconChartBar },
   { to: '/app', label: 'My Engagements', icon: IconList },
   { to: '/app/create', label: 'Create Engagement', icon: IconPlus },
   { to: '/docs', label: 'Docs', icon: IconBook },
-  { to: '/stats', label: 'Transparency', icon: IconChartBar },
 ]
 
 const COLLAPSE_KEY = 'phasetwo:sidebar-collapsed'

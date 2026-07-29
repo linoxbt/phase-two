@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { formatEther } from 'viem'
 import { listAllIds, getEngagement } from '../lib/surety'
 import { mapWithConcurrency } from '../lib/concurrency'
 import { NETWORKS as NETWORK_REGISTRY, useNetwork } from '../lib/network'
 import type { Engagement, StatusValue } from '../lib/types'
 import { STATUS_LABEL } from '../lib/types'
+import { StatusBadge } from '../components/StatusBadge'
 import { Card } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
 import { AnimatedCounter } from '../components/ui/AnimatedCounter'
+import { formatGen, formatUnixDate, shortAddress } from '../lib/format'
 
 const STATUS_ORDER: StatusValue[] = ['created', 'submitted', 'released', 'rejected', 'disputed', 'expired']
 
@@ -111,6 +114,41 @@ export function Stats() {
               </div>
             )}
           </Card>
+
+          <div className="mt-10">
+            <p className="label-mono mb-4 text-xs text-ink-soft">All engagements</p>
+            {total === 0 ? (
+              <p className="text-sm text-ink-soft">No engagements yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {[...(engagements ?? [])]
+                  .sort((a, b) => b.id - a.id)
+                  .map((eng) => (
+                    <li key={eng.id}>
+                      <Link to={`/app/engagement/${eng.id}`}>
+                        <Card interactive className="p-5">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="truncate text-lg font-semibold text-ink">
+                                #{eng.id} - {eng.deliverable_spec}
+                              </p>
+                              <p className="mt-1 text-xs text-ink-soft">
+                                {formatGen(eng.amount)} &middot; deadline {formatUnixDate(eng.deadline)}
+                              </p>
+                              <p className="mt-1 font-mono text-xs text-ink-soft/70">
+                                depositor {shortAddress(eng.depositor)} &middot; counterparty{' '}
+                                {shortAddress(eng.counterparty)}
+                              </p>
+                            </div>
+                            <StatusBadge status={eng.status} />
+                          </div>
+                        </Card>
+                      </Link>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         </>
       )}
     </div>

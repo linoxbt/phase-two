@@ -21,6 +21,10 @@ export function explorerUrl(hash: string): string {
   return `${getActiveChain().blockExplorers?.default.url ?? ''}/tx/${hash}`
 }
 
+export function explorerAddressUrl(address: string): string {
+  return `${getActiveChain().blockExplorers?.default.url ?? ''}/address/${address}`
+}
+
 export function TxStatus({ hash, onSettled }: Props) {
   const [state, setState] = useState<TxLifecycle>('pending')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
