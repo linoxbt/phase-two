@@ -56,10 +56,7 @@ export function Stats() {
       <div className="mb-10 text-left">
         <p className="label-mono text-xs text-coral-600">Live on {NETWORK_REGISTRY[network].label}</p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Transparency</h1>
-        <p className="mt-4 max-w-xl text-ink-soft">
-          Every engagement on Phase Two is public on-chain data - no aggregation happens off-chain. This page reads
-          it directly from the deployed contract.
-        </p>
+        <p className="mt-4 max-w-xl text-ink-soft">Read live from the contract - nothing aggregated off-chain.</p>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

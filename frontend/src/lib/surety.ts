@@ -1,31 +1,38 @@
 import { parseEther, type EIP1193Provider } from 'viem'
 import { getReadClient, createWriteClient, getContractAddress } from './genlayer-client'
+import { withRetry } from './retry'
 import type { Engagement } from './types'
 
 export async function getEngagement(id: number): Promise<Engagement> {
-  const result = await getReadClient().readContract({
-    address: getContractAddress(),
-    functionName: 'get_engagement',
-    args: [id],
-  })
+  const result = await withRetry(() =>
+    getReadClient().readContract({
+      address: getContractAddress(),
+      functionName: 'get_engagement',
+      args: [id],
+    }),
+  )
   return result as unknown as Engagement
 }
 
 export async function listEngagementsFor(address: `0x${string}`): Promise<number[]> {
-  const result = await getReadClient().readContract({
-    address: getContractAddress(),
-    functionName: 'list_engagements_for',
-    args: [address],
-  })
+  const result = await withRetry(() =>
+    getReadClient().readContract({
+      address: getContractAddress(),
+      functionName: 'list_engagements_for',
+      args: [address],
+    }),
+  )
   return (result as unknown as number[]) ?? []
 }
 
 export async function listAllIds(): Promise<number[]> {
-  const result = await getReadClient().readContract({
-    address: getContractAddress(),
-    functionName: 'list_all_ids',
-    args: [],
-  })
+  const result = await withRetry(() =>
+    getReadClient().readContract({
+      address: getContractAddress(),
+      functionName: 'list_all_ids',
+      args: [],
+    }),
+  )
   return (result as unknown as number[]) ?? []
 }
 

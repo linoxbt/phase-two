@@ -1,5 +1,6 @@
 import type { TransactionHash } from 'genlayer-js/types'
 import { getReadClient } from './genlayer-client'
+import { withRetry } from './retry'
 import { NETWORKS, type NetworkKey } from './network'
 
 /**
@@ -21,7 +22,7 @@ const REFERENCE_TX: Record<NetworkKey, `0x${string}`> = {
  * back to the network's documented default if the read fails. */
 export async function getRecentValidatorCount(network: NetworkKey): Promise<number> {
   try {
-    const tx: any = await getReadClient().getTransaction({ hash: REFERENCE_TX[network] as TransactionHash })
+    const tx: any = await withRetry(() => getReadClient().getTransaction({ hash: REFERENCE_TX[network] as TransactionHash }))
     const validators = tx?.consumedValidators ?? tx?.lastRound?.roundValidators
     if (Array.isArray(validators) && validators.length > 0) return validators.length
   } catch {

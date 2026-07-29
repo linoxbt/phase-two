@@ -1,8 +1,12 @@
-/** Runs `fn` over `items` with at most `limit` requests in flight at once.
- * The GenLayer RPC caps concurrent `gen_call` requests - a plain
- * `Promise.all` over every engagement id starts failing once there are
- * more than a handful, so every list-of-engagements fetch in the app goes
- * through this instead of firing them all at the same time. */
+const PACING_DELAY_MS = 150
+
+/** Runs `fn` over `items` with at most `limit` requests in flight at once,
+ * with a small pacing gap between dispatches. The GenLayer RPC caps
+ * `gen_call` throughput tightly enough that even fully-sequential
+ * (limit: 1) reads with no gap can trip it under load - a plain
+ * `Promise.all` over every engagement id fails far sooner. Individual reads
+ * also retry on rate-limit errors (see lib/retry.ts); this pacing exists to
+ * make hitting that limit in the first place less likely. */
 export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length)
   let next = 0
@@ -10,6 +14,7 @@ export async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (i
   async function worker() {
     while (next < items.length) {
       const current = next++
+      if (current > 0) await new Promise((resolve) => setTimeout(resolve, PACING_DELAY_MS))
       results[current] = await fn(items[current])
     }
   }

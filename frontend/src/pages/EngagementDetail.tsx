@@ -5,6 +5,7 @@ import type { EIP1193Provider } from 'viem'
 import { useWallet } from '../lib/wallet'
 import { getEngagement, submitDeliverable, requestRelease, raiseDispute, refundExpired } from '../lib/surety'
 import { getReadClient } from '../lib/genlayer-client'
+import { withRetry } from '../lib/retry'
 import { useNetwork } from '../lib/network'
 import { markSeen } from '../lib/activity'
 import type { Engagement, StatusValue } from '../lib/types'
@@ -54,8 +55,7 @@ export function EngagementDetail() {
 
   useEffect(() => {
     if (!lastReleaseTx) return
-    getReadClient()
-      .canAppeal({ txId: lastReleaseTx as TransactionHash })
+    withRetry(() => getReadClient().canAppeal({ txId: lastReleaseTx as TransactionHash }))
       .then(setCanAppeal)
       .catch(() => setCanAppeal(false))
   }, [lastReleaseTx])
