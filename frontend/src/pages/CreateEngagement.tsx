@@ -246,8 +246,9 @@ export function CreateEngagement() {
             <p>
               Five independent GenLayer validators fetch the submitted evidence themselves at judgment time and
               compare it against your verification criteria above - nothing submitted as text is trusted at face
-              value. If validators disagree with each other, GenLayer&apos;s consensus mechanism resolves it before
-              a verdict is ever written back to this contract.
+              value. Judgment is triggered on request and usually completes in under a minute, occasionally a few
+              minutes longer under load. If validators disagree with each other, GenLayer&apos;s consensus mechanism
+              resolves it before a verdict is ever written back to this contract.
             </p>
             <a href="/docs#concepts" className="mt-2 inline-block text-coral-600 underline hover:text-coral-700">
               Read more about validator consensus

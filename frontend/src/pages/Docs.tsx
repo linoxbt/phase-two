@@ -125,7 +125,8 @@ export function Docs() {
               <Step n={3} title="Validators judge live">
                 Anyone can trigger <Code>request_release</Code>. Five independent validators fetch the evidence
                 themselves at judgment time and compare it against the spec - nothing submitted as text is
-                trusted at face value.
+                trusted at face value. Judgment typically completes in under a minute; occasionally longer if a
+                validator round needs a retry.
               </Step>
               <Step n={4} title="Release, or dispute">
                 A pass releases funds to the counterparty immediately. A rejection opens a 3-day appeal window;

@@ -30,7 +30,6 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { IconScale } from '../components/icons'
 import { formatGen, formatUnixDate, isPast, shortAddress, splitTitle, appealWindowStatus } from '../lib/format'
 
-const TIMELINE: StatusValue[] = ['created', 'submitted', 'released']
 
 export function EngagementDetail() {
   const { id } = useParams<{ id: string }>()
@@ -140,7 +139,7 @@ export function EngagementDetail() {
     <div className="mx-auto max-w-2xl px-6 py-12">
       <p className="label-mono mb-1 text-xs text-ink-soft/70">Engagement #{eng.id}</p>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{title}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">{title}</h1>
         <StatusBadge status={eng.status} judging={isJudging} />
       </div>
       <p className="mb-4 text-sm text-ink-soft">
@@ -319,26 +318,45 @@ export function EngagementDetail() {
 }
 
 function Timeline({ status, judging = false }: { status: StatusValue; judging?: boolean }) {
-  const terminal: StatusValue[] = ['released', 'rejected', 'disputed', 'expired', 'refunded']
-  const isTerminal = terminal.includes(status)
-  const isJudgingNow = judging && (status === 'submitted' || status === 'disputed')
-  const steps: string[] = isJudgingNow
-    ? ['created', 'submitted', 'judging', 'released']
-    : isTerminal
-      ? [...TIMELINE.slice(0, 2), status]
-      : TIMELINE
+  // "judging" isn't a real on-chain status - request_release runs judgment
+  // synchronously and the contract only ever lands on submitted/disputed
+  // going in, released/rejected coming out. It's shown here as a permanent
+  // waypoint in the pipeline (not just while this browser has a tx pending)
+  // so anyone viewing a submitted engagement sees what's next, not just the
+  // person who happened to click Request Release.
+  const judgedTerminal: StatusValue[] = ['released', 'rejected', 'refunded']
+  const otherTerminal: StatusValue[] = ['disputed', 'expired']
+  const isActivelyJudgingDispute = judging && status === 'disputed'
+
+  let steps: string[]
+  let reachedCount: number
+  if (judgedTerminal.includes(status)) {
+    steps = ['created', 'submitted', 'judging', status]
+    reachedCount = 4
+  } else if (isActivelyJudgingDispute) {
+    steps = ['created', 'submitted', 'disputed', 'judging']
+    reachedCount = 4
+  } else if (otherTerminal.includes(status)) {
+    steps = ['created', 'submitted', status]
+    reachedCount = 3
+  } else if (status === 'submitted') {
+    steps = ['created', 'submitted', 'judging', 'released']
+    reachedCount = 2
+  } else {
+    steps = ['created', 'submitted', 'judging', 'released']
+    reachedCount = 1
+  }
 
   return (
     <ol className="flex flex-wrap items-center gap-y-2 gap-x-2 text-xs">
       {steps.map((step, i) => {
-        const reached = isJudgingNow
-          ? i <= 2
-          : TIMELINE.indexOf(status) >= i || (isTerminal && i === steps.length - 1) || (isTerminal && i < 2)
+        const reached = i < reachedCount
+        const isPulsing = step === 'judging' && judging && (status === 'submitted' || status === 'disputed')
         return (
           <li key={step} className="flex items-center gap-2">
             <span
               className={`rounded-full px-3 py-1 font-medium ${
-                step === 'judging'
+                isPulsing
                   ? 'animate-pulse bg-coral-500 text-black'
                   : reached
                     ? 'bg-coral-500 text-black'
@@ -545,9 +563,10 @@ function RequestReleaseAction({
         <div className="mb-5 flex gap-3 rounded-xl bg-ink/[0.03] p-4 text-sm text-ink-soft">
           <IconScale width={20} height={20} className="mt-0.5 shrink-0 text-coral-500" />
           <p>
-            Five independent validators will fetch the submitted evidence live and judge it against the spec. This
-            costs gas and cannot be undone once submitted - only a dispute or protocol appeal can revisit the
-            outcome.
+            Five independent validators will fetch the submitted evidence live and judge it against the spec.
+            Judgment usually completes in under a minute, but can take a few minutes longer if a validator needs to
+            retry. This costs gas and cannot be undone once submitted - only a dispute or protocol appeal can
+            revisit the outcome.
           </p>
         </div>
         <div className="flex justify-end gap-3">
