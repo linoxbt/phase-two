@@ -200,8 +200,9 @@ export function Docs() {
               <Method name="create_engagement" args="counterparty, deliverable_spec, deadline" note="Write · payable">
                 Locks the sent value as the deposit and opens a new engagement.
               </Method>
-              <Method name="submit_deliverable" args="engagement_id, evidence_urls, notes" note="Write · counterparty only">
-                Attaches evidence and moves the engagement to <Code>submitted</Code>.
+              <Method name="submit_deliverable" args="engagement_id, evidence_urls, notes" note="Write · counterparty only, one-time">
+                Attaches evidence and moves the engagement to <Code>submitted</Code>. Can only be called once, before
+                judgment - updating evidence after that goes through <Code>raise_dispute</Code> instead.
               </Method>
               <Method name="request_release" args="engagement_id" note="Write · triggers validator judgment">
                 Runs the validator comparison against the spec; releases or rejects based on consensus.

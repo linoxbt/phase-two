@@ -159,7 +159,11 @@ class Surety(gl.Contract):
         eng = self._get(u256(engagement_id))
         if gl.message.sender_address != eng.counterparty:
             raise gl.vm.UserError(f"{ERROR_EXPECTED} Only the counterparty may submit a deliverable")
-        self._require_status(eng, (Status.CREATED, Status.SUBMITTED), "submit")
+        # One shot only: once submitted, evidence can't be silently swapped
+        # before anyone has judged it. Changing evidence after that point
+        # goes through raise_dispute's additional_evidence instead, which is
+        # visible to both parties and re-triggers judgment explicitly.
+        self._require_status(eng, (Status.CREATED,), "submit")
         if self._now() > eng.deadline:
             # Enforces the "deterministic refund" guarantee (Docs/marketing copy):
             # without this, a submission arriving after the deadline - even

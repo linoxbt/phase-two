@@ -46,17 +46,21 @@ def test_submit_deliverable_requires_evidence(direct_vm, direct_deploy, direct_a
         contract.submit_deliverable(eid, [], "no proof")
 
 
-def test_submit_deliverable_allows_resubmission(direct_vm, direct_deploy, direct_alice, direct_bob):
+def test_submit_deliverable_blocks_resubmission(direct_vm, direct_deploy, direct_alice, direct_bob):
+    # One shot only: further evidence after a first submission goes through
+    # raise_dispute's additional_evidence, not a second submit_deliverable.
     contract = deploy_surety(direct_vm, direct_deploy)
     eid = _create(contract, direct_vm, direct_alice, direct_bob)
 
     direct_vm.sender = direct_bob
     contract.submit_deliverable(eid, ["https://example.com/v1"], "v1")
-    contract.submit_deliverable(eid, ["https://example.com/v2"], "v2")
+
+    with direct_vm.expect_revert("Cannot submit in status 'submitted'"):
+        contract.submit_deliverable(eid, ["https://example.com/v2"], "v2")
 
     eng = contract.get_engagement(eid)
-    assert eng["notes"] == "v2"
-    assert list(eng["evidence_urls"]) == ["https://example.com/v2"]
+    assert eng["notes"] == "v1"
+    assert list(eng["evidence_urls"]) == ["https://example.com/v1"]
 
 
 def test_submit_deliverable_caps_url_count(direct_vm, direct_deploy, direct_alice, direct_bob):

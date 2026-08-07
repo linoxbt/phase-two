@@ -148,12 +148,18 @@ export function MyEngagements() {
                 <Card interactive className="p-5">
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
+                      <span
+                        className={`label-mono mb-1.5 inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] ${
+                          role === 'Depositor' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {role === 'Depositor' ? 'You created this' : "You're the counterparty"}
+                      </span>
                       <p className="truncate text-lg font-semibold text-ink">
                         #{eng.id} - {title}
                       </p>
                       <p className="mt-1 text-xs text-ink-soft">
-                        You&apos;re the {role} &middot; {formatGen(eng.amount)} &middot; deadline{' '}
-                        {formatUnixDate(eng.deadline)}
+                        {formatGen(eng.amount)} &middot; deadline {formatUnixDate(eng.deadline)}
                       </p>
                       <p className="mt-1 font-mono text-xs text-ink-soft/70">
                         depositor {shortAddress(eng.depositor)} &middot; counterparty {shortAddress(eng.counterparty)}

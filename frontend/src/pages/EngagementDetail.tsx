@@ -233,7 +233,7 @@ export function EngagementDetail() {
 
       {!isParty && address && <p className="mt-8 text-sm text-ink-soft">You are not a party to this engagement.</p>}
 
-      {isCounterparty && provider && (eng.status === 'created' || eng.status === 'submitted') && (
+      {isCounterparty && provider && eng.status === 'created' && (
         <SubmitDeliverableForm
           address={address!}
           provider={provider}
@@ -525,7 +525,9 @@ function RequestReleaseAction({
       <p className="mb-3 text-sm text-ink-soft">
         Triggers validator judgment: they fetch the evidence live and compare it against the spec.
       </p>
-      <Button onClick={() => setConfirmOpen(true)}>Request Release</Button>
+      <Button onClick={() => setConfirmOpen(true)} loading={busy}>
+        {busy ? 'Judging…' : 'Request Release'}
+      </Button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       {hash && (
         <div className="mt-3">
@@ -578,6 +580,7 @@ function SubmitDeliverableForm({
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [hash, setHash] = useState<`0x${string}` | null>(null)
+  const [commentHash, setCommentHash] = useState<`0x${string}` | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   return (
@@ -623,14 +626,45 @@ function SubmitDeliverableForm({
         Submit Deliverable
       </Button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      {hash && (
+      {hash && !commentHash && (
         <div className="mt-3">
           <TxStatus
             hash={hash}
-            onSettled={(ok) => {
-              setBusy(false)
+            onSettled={async (ok) => {
               onSubmitting(null)
-              onSettled(ok)
+              if (!ok) {
+                setBusy(false)
+                onSettled(false)
+                return
+              }
+              // Best-effort: let the creator know via the comment thread, since
+              // there's no off-chain notification to send this as. The
+              // deliverable is already submitted regardless of whether this
+              // second transaction succeeds.
+              try {
+                const ch = (await addComment(
+                  address,
+                  provider,
+                  engagementId,
+                  'Deliverable submitted for review.',
+                )) as `0x${string}`
+                setCommentHash(ch)
+              } catch {
+                setBusy(false)
+                onSettled(true)
+              }
+            }}
+          />
+        </div>
+      )}
+      {commentHash && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs text-ink-soft">Notifying the depositor...</p>
+          <TxStatus
+            hash={commentHash}
+            onSettled={() => {
+              setBusy(false)
+              onSettled(true)
             }}
           />
         </div>

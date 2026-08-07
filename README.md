@@ -32,7 +32,7 @@ A single Intelligent Contract (class `Surety`) owns the full escrow lifecycle:
 | Method | Type | Description |
 |---|---|---|
 | `create_engagement(counterparty, deliverable_spec, deadline)` | write · payable | Locks the sent value as the deposit, opens a new engagement |
-| `submit_deliverable(engagement_id, evidence_urls, notes)` | write · counterparty only | Attaches evidence, moves the engagement to `submitted`. Blocked once the deadline has passed |
+| `submit_deliverable(engagement_id, evidence_urls, notes)` | write · counterparty only, one-time | Attaches evidence, moves the engagement to `submitted`. Blocked once the deadline has passed or after the first submission — further evidence goes through `raise_dispute` |
 | `request_release(engagement_id)` | write | Triggers validator judgment — fetches evidence live, releases or rejects based on consensus |
 | `raise_dispute(engagement_id, evidence_urls, reason)` | write · either party | Appends evidence and re-triggers judgment after a rejection or release. Blocked once the appeal window has closed on a rejection |
 | `refund_expired(engagement_id)` | write | Refunds the deposit if the deadline passed with nothing ever submitted |
@@ -62,8 +62,8 @@ App pages share a collapsible sidebar shell; a network switcher in the sidebar l
 
 | Network | Chain id | Contract address | Notes |
 |---|---|---|---|
-| **Asimov Testnet** | `4221` | `0x20962A33f57cC9034dB9f4b3bB98aA3889ee3824` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
-| **Studio Network** | `61999` | `0x1a34bdeaD4D335deA0bC8c7BA6F679c47CFa7023` | Hosted GenLayer Studio. Gasless — no funded account needed |
+| **Asimov Testnet** | `4221` | `0x2Ef1AD4c28569acCf61661a2961feF9077Aa0419` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
+| **Studio Network** | `61999` | `0x05Cdc1C4e49F82e8d5aB44D9fB646a4B5814b38C` | Hosted GenLayer Studio. Gasless — no funded account needed |
 
 ## Getting started
 
@@ -85,8 +85,8 @@ npm run dev
 `.env.local`:
 
 ```bash
-VITE_CONTRACT_ADDRESS_ASIMOV=0xdbf55c1dEd7d0F5f2f1e5733eC6688D2425ba3f4
-VITE_CONTRACT_ADDRESS_STUDIONET=0xC483fe1Df490Ba96F025d972599cb443570D581F
+VITE_CONTRACT_ADDRESS_ASIMOV=0x2Ef1AD4c28569acCf61661a2961feF9077Aa0419
+VITE_CONTRACT_ADDRESS_STUDIONET=0x05Cdc1C4e49F82e8d5aB44D9fB646a4B5814b38C
 VITE_REOWN_PROJECT_ID=<your project id from https://dashboard.reown.com>
 ```
 
