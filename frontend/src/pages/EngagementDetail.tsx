@@ -3,12 +3,12 @@ import { useParams } from 'react-router-dom'
 import type { TransactionHash } from 'genlayer-js/types'
 import type { EIP1193Provider } from 'viem'
 import { useWallet } from '../lib/wallet'
-import { getEngagement, submitDeliverable, requestRelease, raiseDispute, refundExpired } from '../lib/surety'
+import { getEngagement, submitDeliverable, requestRelease, raiseDispute, refundExpired, addComment } from '../lib/surety'
 import { getReadClient } from '../lib/genlayer-client'
 import { withRetry } from '../lib/retry'
 import { useNetwork } from '../lib/network'
 import { markSeen } from '../lib/activity'
-import type { Engagement, StatusValue } from '../lib/types'
+import type { Comment, Engagement, StatusValue } from '../lib/types'
 import { StatusBadge } from '../components/StatusBadge'
 import { TxStatus, explorerUrl, explorerAddressUrl } from '../components/TxStatus'
 import { getContractAddress } from '../lib/genlayer-client'
@@ -174,6 +174,17 @@ export function EngagementDetail() {
         </div>
       )}
 
+      <CommentThread
+        comments={eng.comments}
+        isParty={isParty}
+        address={address}
+        provider={provider}
+        engagementId={eng.id}
+        onSettled={(ok) => {
+          if (ok) refresh()
+        }}
+      />
+
       {!isParty && address && <p className="mt-8 text-sm text-ink-soft">You are not a party to this engagement.</p>}
 
       {isCounterparty && provider && (eng.status === 'created' || eng.status === 'submitted') && (
@@ -254,6 +265,93 @@ function Timeline({ status }: { status: StatusValue }) {
         )
       })}
     </ol>
+  )
+}
+
+function CommentThread({
+  comments,
+  isParty,
+  address,
+  provider,
+  engagementId,
+  onSettled,
+}: {
+  comments: Comment[]
+  isParty: boolean
+  address: `0x${string}` | null
+  provider: EIP1193Provider | null
+  engagementId: number
+  onSettled: (ok: boolean) => void
+}) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [hash, setHash] = useState<`0x${string}` | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  return (
+    <div className="mt-8">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">
+        Comments{comments.length > 0 ? ` (${comments.length})` : ''}
+      </h2>
+
+      {comments.length === 0 && <p className="text-sm text-ink-soft">No comments yet.</p>}
+
+      <ul className="space-y-3">
+        {comments.map((c, i) => (
+          <li key={i} className="rounded-xl border border-ink/8 bg-paper p-4">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <span className="font-mono text-xs text-ink-soft">{shortAddress(c.author)}</span>
+              <span className="text-xs text-ink-soft/60">{formatUnixDate(c.created_at)}</span>
+            </div>
+            <p className="whitespace-pre-wrap text-sm text-ink">{c.text}</p>
+          </li>
+        ))}
+      </ul>
+
+      {isParty && address && provider && (
+        <div className="mt-4">
+          <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment..." rows={2} />
+          <div className="mt-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={busy}
+              onClick={async () => {
+                if (!text.trim()) {
+                  setError('Comment cannot be empty.')
+                  return
+                }
+                setBusy(true)
+                setError(null)
+                try {
+                  const h = (await addComment(address, provider, engagementId, text.trim())) as `0x${string}`
+                  setHash(h)
+                } catch (err: any) {
+                  setError(err?.message ?? 'Transaction failed')
+                  setBusy(false)
+                }
+              }}
+            >
+              Post Comment
+            </Button>
+          </div>
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {hash && (
+            <div className="mt-3">
+              <TxStatus
+                hash={hash}
+                onSettled={(ok) => {
+                  setBusy(false)
+                  if (ok) setText('')
+                  setHash(null)
+                  onSettled(ok)
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

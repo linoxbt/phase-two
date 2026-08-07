@@ -9,6 +9,12 @@ export const Status = {
 
 export type StatusValue = (typeof Status)[keyof typeof Status]
 
+export interface Comment {
+  author: `0x${string}`
+  text: string
+  created_at: number
+}
+
 export interface Engagement {
   id: number
   depositor: `0x${string}`
@@ -23,6 +29,7 @@ export interface Engagement {
   deadline: number
   dispute_round: number
   funds_released: boolean
+  comments: Comment[]
 }
 
 export const STATUS_LABEL: Record<StatusValue, string> = {

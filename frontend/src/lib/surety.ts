@@ -105,3 +105,18 @@ export async function refundExpired(account: `0x${string}`, provider: EIP1193Pro
     value: 0n,
   })
 }
+
+export async function addComment(
+  account: `0x${string}`,
+  provider: EIP1193Provider,
+  engagementId: number,
+  text: string,
+) {
+  const client = createWriteClient(account, provider)
+  return client.writeContract({
+    address: getContractAddress(),
+    functionName: 'add_comment',
+    args: [engagementId, text],
+    value: 0n,
+  })
+}

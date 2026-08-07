@@ -36,7 +36,8 @@ A single Intelligent Contract (class `Surety`) owns the full escrow lifecycle:
 | `request_release(engagement_id)` | write | Triggers validator judgment — fetches evidence live, releases or rejects based on consensus |
 | `raise_dispute(engagement_id, evidence_urls, reason)` | write · either party | Appends evidence and re-triggers judgment after a rejection or release |
 | `refund_expired(engagement_id)` | write | Refunds the deposit if the deadline passed with nothing ever submitted |
-| `get_engagement(engagement_id)` | view | Full engagement record |
+| `add_comment(engagement_id, text)` | write · either party | Posts a message to the engagement's on-chain comment thread, visible to both parties and the public |
+| `get_engagement(engagement_id)` | view | Full engagement record, including its comment thread |
 | `list_engagements_for(address)` | view | Engagement ids where the address is depositor or counterparty |
 | `list_all_ids()` | view | All engagement ids (backs the public transparency page) |
 
@@ -59,8 +60,8 @@ App pages share a collapsible sidebar shell; a network switcher in the sidebar l
 
 | Network | Chain id | Contract address | Notes |
 |---|---|---|---|
-| **Asimov Testnet** | `4221` | `0xdbf55c1dEd7d0F5f2f1e5733eC6688D2425ba3f4` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
-| **Studio Network** | `61999` | `0xC483fe1Df490Ba96F025d972599cb443570D581F` | Hosted GenLayer Studio. Gasless — no funded account needed |
+| **Asimov Testnet** | `4221` | `0x580DC939e852A2cdc54027e5a464a8e0221Ff555` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
+| **Studio Network** | `61999` | `0x5935F92327BF9bE276002ad6F44FC8dB103f841C` | Hosted GenLayer Studio. Gasless — no funded account needed |
 
 ## Getting started
 

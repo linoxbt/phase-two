@@ -17,6 +17,8 @@ ERROR_LLM = "[LLM_ERROR]"
 MAX_EVIDENCE_URLS = 10
 MAX_CHARS_PER_URL = 4000
 MAX_TOTAL_EVIDENCE_CHARS = 16000
+MAX_COMMENTS = 50
+MAX_COMMENT_CHARS = 2000
 
 
 class Status:
@@ -26,6 +28,14 @@ class Status:
     REJECTED = "rejected"
     DISPUTED = "disputed"
     EXPIRED = "expired"
+
+
+@allow_storage
+@dataclass
+class Comment:
+    author: Address
+    text: str
+    created_at: u256
 
 
 @allow_storage
@@ -44,6 +54,7 @@ class Engagement:
     deadline: u256
     dispute_round: u256
     funds_released: bool
+    comments: DynArray[Comment]
 
 
 class Surety(gl.Contract):
@@ -118,6 +129,7 @@ class Surety(gl.Contract):
             deadline=deadline,
             dispute_round=u256(0),
             funds_released=False,
+            comments=[],
         )
         self.engagements[engagement_id] = eng
         self.all_ids.append(engagement_id)
@@ -264,6 +276,26 @@ Respond with strict JSON only, no other text:
         self._save(eng)
 
     # ------------------------------------------------------------------
+    # Flow F - comments (plain communication between the two parties)
+    # ------------------------------------------------------------------
+
+    @gl.public.write
+    def add_comment(self, engagement_id: int, text: str) -> None:
+        eng = self._get(u256(engagement_id))
+        sender = gl.message.sender_address
+        if sender != eng.depositor and sender != eng.counterparty:
+            raise gl.vm.UserError(f"{ERROR_EXPECTED} Only the depositor or counterparty may comment")
+        if not text.strip():
+            raise gl.vm.UserError(f"{ERROR_EXPECTED} Comment text must not be empty")
+        if len(text) > MAX_COMMENT_CHARS:
+            raise gl.vm.UserError(f"{ERROR_EXPECTED} Comment too long (max {MAX_COMMENT_CHARS} characters)")
+        if len(eng.comments) >= MAX_COMMENTS:
+            raise gl.vm.UserError(f"{ERROR_EXPECTED} Comment limit reached (max {MAX_COMMENTS})")
+
+        eng.comments.append(Comment(author=sender, text=text.strip(), created_at=self._now()))
+        self._save(eng)
+
+    # ------------------------------------------------------------------
     # Flow E - expiry (deterministic, no LLM)
     # ------------------------------------------------------------------
 
@@ -311,6 +343,9 @@ Respond with strict JSON only, no other text:
             "deadline": int(eng.deadline),
             "dispute_round": int(eng.dispute_round),
             "funds_released": eng.funds_released,
+            "comments": [
+                {"author": c.author, "text": c.text, "created_at": int(c.created_at)} for c in eng.comments
+            ],
         }
 
     @gl.public.view
