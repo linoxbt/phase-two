@@ -42,6 +42,7 @@ export function EngagementDetail() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [pendingTx, setPendingTx] = useState<`0x${string}` | null>(null)
   const [lastReleaseTx, setLastReleaseTx] = useState<`0x${string}` | null>(null)
+  const [isJudging, setIsJudging] = useState(false)
   const [canAppeal, setCanAppeal] = useState(false)
   const [appealWindowSeconds, setAppealWindowSeconds] = useState<number | null>(null)
 
@@ -124,6 +125,7 @@ export function EngagementDetail() {
 
   function onSettled(ok: boolean, opts?: { isRelease?: boolean; hash?: `0x${string}` }) {
     if (ok && opts?.isRelease && opts.hash) setLastReleaseTx(opts.hash)
+    if (opts?.isRelease) setIsJudging(false)
     if (ok) refresh()
     setPendingTx(null)
   }
@@ -139,7 +141,7 @@ export function EngagementDetail() {
       <p className="label-mono mb-1 text-xs text-ink-soft/70">Engagement #{eng.id}</p>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <h1 className="font-display text-3xl font-bold tracking-tight text-ink">{title}</h1>
-        <StatusBadge status={eng.status} />
+        <StatusBadge status={eng.status} judging={isJudging} />
       </div>
       <p className="mb-4 text-sm text-ink-soft">
         <span className="font-mono text-ink">{shortAddress(eng.depositor)}</span> (depositor) is paying{' '}
@@ -147,7 +149,7 @@ export function EngagementDetail() {
       </p>
       {description && <p className="mb-8 whitespace-pre-wrap text-ink-soft">{description}</p>}
 
-      <Timeline status={eng.status} />
+      <Timeline status={eng.status} judging={isJudging} />
 
       <Card className="mt-8 grid grid-cols-2 gap-y-3 p-5 text-sm">
         <dt className="text-ink-soft">Depositor</dt>
@@ -246,6 +248,7 @@ export function EngagementDetail() {
           onClick={async () => {
             const hash = (await requestRelease(address!, provider, eng.id)) as `0x${string}`
             setPendingTx(hash)
+            setIsJudging(true)
             return hash
           }}
           onSettled={(ok, hash) => onSettled(ok, { isRelease: true, hash })}
@@ -315,18 +318,33 @@ export function EngagementDetail() {
   )
 }
 
-function Timeline({ status }: { status: StatusValue }) {
+function Timeline({ status, judging = false }: { status: StatusValue; judging?: boolean }) {
   const terminal: StatusValue[] = ['released', 'rejected', 'disputed', 'expired', 'refunded']
   const isTerminal = terminal.includes(status)
-  const steps = isTerminal ? [...TIMELINE.slice(0, 2), status] : TIMELINE
+  const isJudgingNow = judging && (status === 'submitted' || status === 'disputed')
+  const steps: string[] = isJudgingNow
+    ? ['created', 'submitted', 'judging', 'released']
+    : isTerminal
+      ? [...TIMELINE.slice(0, 2), status]
+      : TIMELINE
 
   return (
     <ol className="flex flex-wrap items-center gap-y-2 gap-x-2 text-xs">
       {steps.map((step, i) => {
-        const reached = TIMELINE.indexOf(status) >= i || (isTerminal && i === steps.length - 1) || (isTerminal && i < 2)
+        const reached = isJudgingNow
+          ? i <= 2
+          : TIMELINE.indexOf(status) >= i || (isTerminal && i === steps.length - 1) || (isTerminal && i < 2)
         return (
           <li key={step} className="flex items-center gap-2">
-            <span className={`rounded-full px-3 py-1 font-medium ${reached ? 'bg-coral-500 text-black' : 'bg-ink/5 text-ink-soft/70'}`}>
+            <span
+              className={`rounded-full px-3 py-1 font-medium ${
+                step === 'judging'
+                  ? 'animate-pulse bg-coral-500 text-black'
+                  : reached
+                    ? 'bg-coral-500 text-black'
+                    : 'bg-ink/5 text-ink-soft/70'
+              }`}
+            >
               {step}
             </span>
             {i < steps.length - 1 && <span className="text-ink-soft/50">&rarr;</span>}

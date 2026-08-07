@@ -15,6 +15,16 @@ export function formatUnixDate(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toLocaleString()
 }
 
+export function formatUnixDateUTC(unixSeconds: number): string {
+  if (!unixSeconds) return '-'
+  const formatted = new Date(unixSeconds * 1000).toLocaleString('en-US', {
+    timeZone: 'UTC',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+  return `${formatted} UTC`
+}
+
 export function isPast(unixSeconds: number): boolean {
   return Date.now() >= unixSeconds * 1000
 }
