@@ -7,6 +7,7 @@ const STYLES: Record<StatusValue, string> = {
   rejected: 'bg-red-100 text-red-700',
   disputed: 'bg-coral-100 text-coral-700',
   expired: 'bg-ink/5 text-ink-soft/70',
+  refunded: 'bg-ink/5 text-ink-soft/70',
 }
 
 export function StatusBadge({ status }: { status: StatusValue }) {

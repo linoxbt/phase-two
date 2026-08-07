@@ -5,6 +5,7 @@ export const Status = {
   REJECTED: 'rejected',
   DISPUTED: 'disputed',
   EXPIRED: 'expired',
+  REFUNDED: 'refunded',
 } as const
 
 export type StatusValue = (typeof Status)[keyof typeof Status]
@@ -30,6 +31,7 @@ export interface Engagement {
   dispute_round: number
   funds_released: boolean
   comments: Comment[]
+  rejected_at: number
 }
 
 export const STATUS_LABEL: Record<StatusValue, string> = {
@@ -39,4 +41,5 @@ export const STATUS_LABEL: Record<StatusValue, string> = {
   rejected: 'Rejected',
   disputed: 'Disputed',
   expired: 'Expired',
+  refunded: 'Refunded',
 }

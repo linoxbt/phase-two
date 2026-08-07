@@ -11,9 +11,9 @@ JUDGE_WAIT_RETRIES = 120
 JUDGE_WAIT_INTERVAL = 3000
 
 
-def deploy_surety(account=None):
+def deploy_surety(account=None, args=None):
     factory = get_contract_factory(CONTRACT_NAME)
-    return factory.deploy(account=account)
+    return factory.deploy(account=account, args=args)
 
 
 def as_account(contract: Contract, account) -> Contract:

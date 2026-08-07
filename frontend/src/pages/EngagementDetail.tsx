@@ -3,10 +3,20 @@ import { useParams } from 'react-router-dom'
 import type { TransactionHash } from 'genlayer-js/types'
 import type { EIP1193Provider } from 'viem'
 import { useWallet } from '../lib/wallet'
-import { getEngagement, submitDeliverable, requestRelease, raiseDispute, refundExpired, addComment } from '../lib/surety'
+import {
+  getEngagement,
+  submitDeliverable,
+  requestRelease,
+  raiseDispute,
+  refundExpired,
+  settleRejected,
+  getAppealWindowSeconds,
+  addComment,
+} from '../lib/surety'
 import { getReadClient } from '../lib/genlayer-client'
+import { getLastJudgmentTx } from '../lib/judgmentTx'
 import { withRetry } from '../lib/retry'
-import { useNetwork } from '../lib/network'
+import { useNetwork, getActiveChain } from '../lib/network'
 import { markSeen } from '../lib/activity'
 import type { Comment, Engagement, StatusValue } from '../lib/types'
 import { StatusBadge } from '../components/StatusBadge'
@@ -18,7 +28,7 @@ import { Textarea } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Skeleton } from '../components/ui/Skeleton'
 import { IconScale } from '../components/icons'
-import { formatGen, formatUnixDate, isPast, shortAddress, splitTitle } from '../lib/format'
+import { formatGen, formatUnixDate, isPast, shortAddress, splitTitle, appealWindowStatus } from '../lib/format'
 
 const TIMELINE: StatusValue[] = ['created', 'submitted', 'released']
 
@@ -33,6 +43,12 @@ export function EngagementDetail() {
   const [pendingTx, setPendingTx] = useState<`0x${string}` | null>(null)
   const [lastReleaseTx, setLastReleaseTx] = useState<`0x${string}` | null>(null)
   const [canAppeal, setCanAppeal] = useState(false)
+  const [appealWindowSeconds, setAppealWindowSeconds] = useState<number | null>(null)
+
+  // Protocol-level appeals only exist where the chain configures an appeals
+  // contract (Asimov Testnet) - Studio Network has none, and genlayer-js's
+  // canAppeal() unconditionally throws rather than returning false there.
+  const chainSupportsAppeals = Boolean((getActiveChain() as any).appealsContract?.address)
 
   const refresh = useCallback(async () => {
     if (!Number.isInteger(engagementId) || engagementId <= 0) {
@@ -55,11 +71,35 @@ export function EngagementDetail() {
   }, [refresh])
 
   useEffect(() => {
-    if (!lastReleaseTx) return
+    if (!lastReleaseTx || !chainSupportsAppeals) {
+      setCanAppeal(false)
+      return
+    }
     withRetry(() => getReadClient().canAppeal({ txId: lastReleaseTx as TransactionHash }))
       .then(setCanAppeal)
       .catch(() => setCanAppeal(false))
-  }, [lastReleaseTx])
+  }, [lastReleaseTx, chainSupportsAppeals])
+
+  // Reconstructs the judgment tx purely from chain state, so the appeal box
+  // still works after a reload or for the party who didn't trigger the
+  // judgment themselves - not just the browser session that just ran it.
+  useEffect(() => {
+    if (!eng || !chainSupportsAppeals) return
+    if (!['rejected', 'disputed', 'released'].includes(eng.status)) return
+    let cancelled = false
+    getLastJudgmentTx(eng.id).then((hash) => {
+      if (!cancelled && hash) setLastReleaseTx(hash)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [eng?.id, eng?.status, network, chainSupportsAppeals])
+
+  useEffect(() => {
+    getAppealWindowSeconds()
+      .then(setAppealWindowSeconds)
+      .catch(() => setAppealWindowSeconds(null))
+  }, [network])
 
   if (loadError) {
     return (
@@ -89,6 +129,10 @@ export function EngagementDetail() {
   }
 
   const { title, description } = splitTitle(eng.deliverable_spec)
+  const rejectedWindow =
+    eng.status === 'rejected' && appealWindowSeconds !== null
+      ? appealWindowStatus(eng.rejected_at, appealWindowSeconds)
+      : null
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
@@ -208,8 +252,33 @@ export function EngagementDetail() {
         />
       )}
 
-      {isParty && provider && (eng.status === 'rejected' || eng.status === 'released') && (
+      {isParty && provider && eng.status === 'released' && (
         <DisputeForm address={address!} provider={provider} engagementId={eng.id} onSettled={(ok) => onSettled(ok)} />
+      )}
+
+      {eng.status === 'rejected' && rejectedWindow?.isOpen && (
+        <>
+          <p className="mt-6 text-sm text-ink-soft">
+            Appeal window closes {formatUnixDate(rejectedWindow.closesAt)}. If no dispute is raised by then, the
+            deposit becomes refundable to the depositor.
+          </p>
+          {isParty && provider && (
+            <DisputeForm address={address!} provider={provider} engagementId={eng.id} onSettled={(ok) => onSettled(ok)} />
+          )}
+        </>
+      )}
+
+      {eng.status === 'rejected' && rejectedWindow && !rejectedWindow.isOpen && provider && (
+        <ActionButton
+          label="Settle (refund depositor)"
+          description="The appeal window has closed with no dispute raised. This permissionlessly finalizes the refund back to the depositor."
+          onClick={async () => {
+            const hash = (await settleRejected(address!, provider, eng.id)) as `0x${string}`
+            setPendingTx(hash)
+            return hash
+          }}
+          onSettled={(ok) => onSettled(ok)}
+        />
       )}
 
       {canAppeal && lastReleaseTx && (
@@ -247,7 +316,7 @@ export function EngagementDetail() {
 }
 
 function Timeline({ status }: { status: StatusValue }) {
-  const terminal: StatusValue[] = ['released', 'rejected', 'disputed', 'expired']
+  const terminal: StatusValue[] = ['released', 'rejected', 'disputed', 'expired', 'refunded']
   const isTerminal = terminal.includes(status)
   const steps = isTerminal ? [...TIMELINE.slice(0, 2), status] : TIMELINE
 

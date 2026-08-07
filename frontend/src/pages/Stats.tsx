@@ -12,7 +12,7 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { AnimatedCounter } from '../components/ui/AnimatedCounter'
 import { formatGen, formatUnixDate, shortAddress, splitTitle } from '../lib/format'
 
-const STATUS_ORDER: StatusValue[] = ['created', 'submitted', 'released', 'rejected', 'disputed', 'expired']
+const STATUS_ORDER: StatusValue[] = ['created', 'submitted', 'released', 'rejected', 'disputed', 'expired', 'refunded']
 
 const STATUS_BAR_COLOR: Record<StatusValue, string> = {
   created: 'bg-ink/20',
@@ -21,6 +21,7 @@ const STATUS_BAR_COLOR: Record<StatusValue, string> = {
   rejected: 'bg-red-400',
   disputed: 'bg-coral-400',
   expired: 'bg-ink/10',
+  refunded: 'bg-ink/10',
 }
 
 export function Stats() {

@@ -19,6 +19,17 @@ export function isPast(unixSeconds: number): boolean {
   return Date.now() >= unixSeconds * 1000
 }
 
+/** For a rejected engagement, when the appeal window closes and whether it
+ * already has. `rejectedAt`/`windowSeconds` are both 0 for an engagement
+ * that was never rejected. */
+export function appealWindowStatus(
+  rejectedAt: number,
+  windowSeconds: number,
+): { closesAt: number; isOpen: boolean } {
+  const closesAt = rejectedAt + windowSeconds
+  return { closesAt, isOpen: !isPast(closesAt) }
+}
+
 /** The contract only stores one `deliverable_spec` string - CreateEngagement
  * writes it as `title\n\ndescription` so lists can show a real title instead
  * of a truncated wall of text. Older engagements with no blank-line split

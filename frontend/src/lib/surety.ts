@@ -106,6 +106,27 @@ export async function refundExpired(account: `0x${string}`, provider: EIP1193Pro
   })
 }
 
+export async function settleRejected(account: `0x${string}`, provider: EIP1193Provider, engagementId: number) {
+  const client = createWriteClient(account, provider)
+  return client.writeContract({
+    address: getContractAddress(),
+    functionName: 'settle_rejected',
+    args: [engagementId],
+    value: 0n,
+  })
+}
+
+export async function getAppealWindowSeconds(): Promise<number> {
+  const result = await withRetry(() =>
+    getReadClient().readContract({
+      address: getContractAddress(),
+      functionName: 'get_appeal_window_seconds',
+      args: [],
+    }),
+  )
+  return result as unknown as number
+}
+
 export async function addComment(
   account: `0x${string}`,
   provider: EIP1193Provider,

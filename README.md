@@ -34,11 +34,13 @@ A single Intelligent Contract (class `Surety`) owns the full escrow lifecycle:
 | `create_engagement(counterparty, deliverable_spec, deadline)` | write · payable | Locks the sent value as the deposit, opens a new engagement |
 | `submit_deliverable(engagement_id, evidence_urls, notes)` | write · counterparty only | Attaches evidence, moves the engagement to `submitted`. Blocked once the deadline has passed |
 | `request_release(engagement_id)` | write | Triggers validator judgment — fetches evidence live, releases or rejects based on consensus |
-| `raise_dispute(engagement_id, evidence_urls, reason)` | write · either party | Appends evidence and re-triggers judgment after a rejection or release |
+| `raise_dispute(engagement_id, evidence_urls, reason)` | write · either party | Appends evidence and re-triggers judgment after a rejection or release. Blocked once the appeal window has closed on a rejection |
 | `refund_expired(engagement_id)` | write | Refunds the deposit if the deadline passed with nothing ever submitted |
+| `settle_rejected(engagement_id)` | write · permissionless | Finalizes a rejected engagement once its 3-day appeal window closes with no dispute raised — refunds the deposit to the depositor |
 | `add_comment(engagement_id, text)` | write · either party | Posts a message to the engagement's on-chain comment thread, visible to both parties and the public |
-| `get_engagement(engagement_id)` | view | Full engagement record, including its comment thread |
+| `get_engagement(engagement_id)` | view | Full engagement record, including its comment thread and rejection timestamp |
 | `list_engagements_for(address)` | view | Engagement ids where the address is depositor or counterparty |
+| `get_appeal_window_seconds()` | view | The configured appeal window, in seconds (3 days by default) |
 | `list_all_ids()` | view | All engagement ids (backs the public transparency page) |
 
 Validator judgment uses GenLayer's comparative equivalence principle: each validator independently re-fetches the evidence and re-runs the judgment prompt, then an LLM-mediated comparison checks that the `met` verdict and reasoning substantively agree — no validator's answer is ever trusted unverified.
@@ -60,8 +62,8 @@ App pages share a collapsible sidebar shell; a network switcher in the sidebar l
 
 | Network | Chain id | Contract address | Notes |
 |---|---|---|---|
-| **Asimov Testnet** | `4221` | `0x580DC939e852A2cdc54027e5a464a8e0221Ff555` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
-| **Studio Network** | `61999` | `0x5935F92327BF9bE276002ad6F44FC8dB103f841C` | Hosted GenLayer Studio. Gasless — no funded account needed |
+| **Asimov Testnet** | `4221` | `0x20962A33f57cC9034dB9f4b3bB98aA3889ee3824` | GenLayer's public testnet. Needs testnet GEN — [faucet](https://testnet-faucet.genlayer.foundation/) (100 GEN/claim, weekly) |
+| **Studio Network** | `61999` | `0x1a34bdeaD4D335deA0bC8c7BA6F679c47CFa7023` | Hosted GenLayer Studio. Gasless — no funded account needed |
 
 ## Getting started
 

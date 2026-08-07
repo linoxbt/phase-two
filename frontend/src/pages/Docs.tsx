@@ -128,9 +128,14 @@ export function Docs() {
                 trusted at face value.
               </Step>
               <Step n={4} title="Release, or dispute">
-                A pass releases funds to the counterparty immediately. A rejection leaves the deposit in place; either
-                party can raise a dispute with additional evidence and re-trigger judgment, or escalate through
-                GenLayer&apos;s protocol-level appeal.
+                A pass releases funds to the counterparty immediately. A rejection opens a 3-day appeal window;
+                either party can raise a dispute with additional evidence and re-trigger judgment, or escalate
+                through GenLayer&apos;s protocol-level appeal (Asimov Testnet only).
+              </Step>
+              <Step n={5} title="Settle a final rejection">
+                If the appeal window closes with no dispute raised, anyone can permissionlessly finalize it -
+                the deposit refunds to the depositor. This is the terminal path: a rejected engagement can never
+                sit stuck forever.
               </Step>
             </ol>
           </Section>
@@ -153,7 +158,8 @@ export function Docs() {
               </Concept>
               <Concept term="Appeals">
                 A contested verdict can escalate to an expanded validator set at the protocol level - a bonded,
-                on-chain re-evaluation, not a support ticket.
+                on-chain re-evaluation, not a support ticket. GenLayer&apos;s appeal contracts are only configured on
+                Asimov Testnet today, so this path isn&apos;t available on Studio Network.
               </Concept>
             </dl>
           </Section>
@@ -172,7 +178,7 @@ export function Docs() {
                 <Code>released</Code> - validators passed the deliverable; funds paid to the counterparty.
               </li>
               <li>
-                <Code>rejected</Code> - validators failed the deliverable; deposit stays locked pending dispute.
+                <Code>rejected</Code> - validators failed the deliverable; a 3-day appeal window opens.
               </li>
               <li>
                 <Code>disputed</Code> - a party added evidence and re-triggered judgment after a rejection.
@@ -180,6 +186,10 @@ export function Docs() {
               <li>
                 <Code>expired</Code> - the deadline passed with nothing submitted; deposit refunded to the
                 depositor.
+              </li>
+              <li>
+                <Code>refunded</Code> - a rejection&apos;s appeal window closed with no dispute raised; deposit
+                refunded to the depositor.
               </li>
             </ul>
           </Section>
@@ -202,11 +212,17 @@ export function Docs() {
               <Method name="refund_expired" args="engagement_id" note="Write · after deadline, status created only">
                 Refunds the deposit to the depositor if nothing was ever submitted.
               </Method>
+              <Method name="settle_rejected" args="engagement_id" note="Write · permissionless, after the appeal window closes">
+                Finalizes a rejected engagement with no dispute raised - refunds the deposit to the depositor.
+              </Method>
               <Method name="get_engagement" args="engagement_id" note="View">
                 Returns the full engagement record.
               </Method>
               <Method name="list_engagements_for" args="address" note="View">
                 Returns engagement ids where the address is depositor or counterparty.
+              </Method>
+              <Method name="get_appeal_window_seconds" args="" note="View">
+                Returns the configured appeal window, in seconds (3 days by default).
               </Method>
             </div>
           </Section>
@@ -256,9 +272,10 @@ export function Docs() {
                 Validators fetch the evidence themselves at judgment time rather than trusting submitted text, so a
                 broken link, a private repo, or a page that doesn&apos;t match the claim will surface in the verdict.
               </Concept>
-              <Concept term="What if the deadline passes with a rejection unresolved?">
-                A rejection freezes the deposit pending dispute - it does not auto-refund. Only an engagement
-                still in <Code>created</Code> status refunds automatically on deadline.
+              <Concept term="What happens to a rejection nobody disputes?">
+                It doesn&apos;t sit stuck forever. A rejection opens a 3-day appeal window - either party can
+                dispute with new evidence during it, but once it closes, anyone can permissionlessly call{' '}
+                <Code>settle_rejected</Code> to refund the deposit back to the depositor.
               </Concept>
             </dl>
           </Section>

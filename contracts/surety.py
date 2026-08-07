@@ -20,6 +20,12 @@ MAX_TOTAL_EVIDENCE_CHARS = 16000
 MAX_COMMENTS = 50
 MAX_COMMENT_CHARS = 2000
 
+# Objection period after a rejection: either party may still raise_dispute
+# within this window; once it elapses, settle_rejected permissionlessly
+# finalizes the refund. Without this, a rejected engagement with no
+# dispute ever raised would sit with its deposit locked forever.
+APPEAL_WINDOW_SECONDS = 3 * 24 * 60 * 60
+
 
 class Status:
     CREATED = "created"
@@ -28,6 +34,7 @@ class Status:
     REJECTED = "rejected"
     DISPUTED = "disputed"
     EXPIRED = "expired"
+    REFUNDED = "refunded"
 
 
 @allow_storage
@@ -55,15 +62,22 @@ class Engagement:
     dispute_round: u256
     funds_released: bool
     comments: DynArray[Comment]
+    rejected_at: u256
 
 
 class Surety(gl.Contract):
     next_id: u256
     engagements: TreeMap[u256, Engagement]
     all_ids: DynArray[u256]
+    appeal_window_seconds: u256
 
-    def __init__(self):
+    def __init__(self, appeal_window_seconds: int = APPEAL_WINDOW_SECONDS):
+        # Configurable only so tests can deploy with a tiny window and prove
+        # the elapsed-window path against GenVM's real per-transaction clock
+        # (see tests/integration/test_settle_rejected_integration.py) -
+        # production deployments should always use the default 3-day value.
         self.next_id = u256(1)
+        self.appeal_window_seconds = u256(appeal_window_seconds)
 
     # ------------------------------------------------------------------
     # internal helpers
@@ -130,6 +144,7 @@ class Surety(gl.Contract):
             dispute_round=u256(0),
             funds_released=False,
             comments=[],
+            rejected_at=u256(0),
         )
         self.engagements[engagement_id] = eng
         self.all_ids.append(engagement_id)
@@ -248,6 +263,7 @@ Respond with strict JSON only, no other text:
                 eng.status = Status.DISPUTED
             else:
                 eng.status = Status.REJECTED
+                eng.rejected_at = self._now()
 
         self._save(eng)
 
@@ -264,6 +280,10 @@ Respond with strict JSON only, no other text:
         self._require_status(eng, (Status.REJECTED, Status.RELEASED), "dispute")
         if not reason.strip():
             raise gl.vm.UserError(f"{ERROR_EXPECTED} A dispute reason is required")
+        if eng.status == Status.REJECTED and self._now() > eng.rejected_at + self.appeal_window_seconds:
+            raise gl.vm.UserError(
+                f"{ERROR_EXPECTED} The appeal window has closed - call settle_rejected to finalize the refund"
+            )
 
         for url in additional_evidence:
             if len(eng.evidence_urls) >= MAX_EVIDENCE_URLS:
@@ -317,6 +337,25 @@ Respond with strict JSON only, no other text:
         self._save(eng)
 
     # ------------------------------------------------------------------
+    # Flow G - settle a final rejection (deterministic, no LLM)
+    # ------------------------------------------------------------------
+
+    @gl.public.write
+    def settle_rejected(self, engagement_id: int) -> None:
+        eng = self._get(u256(engagement_id))
+        self._require_status(eng, (Status.REJECTED,), "settle")
+        if self._now() <= eng.rejected_at + self.appeal_window_seconds:
+            raise gl.vm.UserError(
+                f"{ERROR_EXPECTED} Appeal window is still open - call raise_dispute instead"
+            )
+
+        if not eng.funds_released:
+            self._pay(eng.depositor, eng.amount)
+            eng.funds_released = True
+        eng.status = Status.REFUNDED
+        self._save(eng)
+
+    # ------------------------------------------------------------------
     # views
     # ------------------------------------------------------------------
 
@@ -346,6 +385,7 @@ Respond with strict JSON only, no other text:
             "comments": [
                 {"author": c.author, "text": c.text, "created_at": int(c.created_at)} for c in eng.comments
             ],
+            "rejected_at": int(eng.rejected_at),
         }
 
     @gl.public.view
@@ -361,6 +401,10 @@ Respond with strict JSON only, no other text:
     @gl.public.view
     def list_all_ids(self) -> list[int]:
         return [int(i) for i in self.all_ids]
+
+    @gl.public.view
+    def get_appeal_window_seconds(self) -> int:
+        return int(self.appeal_window_seconds)
 
 
 def _parse_verdict(raw) -> dict:
