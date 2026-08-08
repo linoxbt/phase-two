@@ -14,8 +14,8 @@ import { NETWORKS, type NetworkKey } from './network'
  * hash here as fresher reference transactions land.
  */
 const REFERENCE_TX: Record<NetworkKey, `0x${string}`> = {
-  testnetAsimov: '0x750dfa12c4ca17db603ec3115ea7c2629b222480ae0ce0d25e13a68457d768c0',
-  studionet: '0x5e38d6dbc86c9b6fa54e3b0721c4101440c19deafceb264d84c394b090843db3',
+  testnetAsimov: '0xd99ee79a64b89507e8b208b54f8e3a0802ecbc262bde9f989b77d46299712c5f',
+  studionet: '0x3740b95921288e710212bde6ce6aa8188c8d41d8743980d0373bc7e767082814',
 }
 
 /** Live validator count from a real transaction's consensus round, falling
