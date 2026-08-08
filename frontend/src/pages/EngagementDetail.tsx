@@ -125,7 +125,12 @@ export function EngagementDetail() {
   function onSettled(ok: boolean, opts?: { isRelease?: boolean; hash?: `0x${string}` }) {
     if (ok && opts?.isRelease && opts.hash) setLastReleaseTx(opts.hash)
     if (opts?.isRelease) setIsJudging(false)
-    if (ok) refresh()
+    // Always refetch, even on failure/unresolved - a fresh read shows the
+    // true on-chain state regardless of whether the client-side wait above
+    // itself succeeded, which matters most for the "still processing"
+    // outcome where the judgment may complete after the client gave up
+    // watching it.
+    refresh()
     setPendingTx(null)
   }
 
@@ -244,6 +249,8 @@ export function EngagementDetail() {
 
       {isParty && provider && (eng.status === 'submitted' || eng.status === 'disputed') && (
         <RequestReleaseAction
+          engagementId={eng.id}
+          previousReasoning={eng.decision_reasoning}
           onClick={async () => {
             const hash = (await requestRelease(address!, provider, eng.id)) as `0x${string}`
             setPendingTx(hash)
@@ -514,9 +521,13 @@ function ActionButton({
 }
 
 function RequestReleaseAction({
+  engagementId,
+  previousReasoning,
   onClick,
   onSettled,
 }: {
+  engagementId: number
+  previousReasoning: string
   onClick: () => Promise<`0x${string}`>
   onSettled: (ok: boolean, hash?: `0x${string}`) => void
 }) {
@@ -524,10 +535,13 @@ function RequestReleaseAction({
   const [busy, setBusy] = useState(false)
   const [hash, setHash] = useState<`0x${string}` | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
+  const [noVerdict, setNoVerdict] = useState(false)
 
   async function run() {
     setBusy(true)
     setError(null)
+    setNoVerdict(false)
     try {
       const h = await onClick()
       setHash(h)
@@ -547,13 +561,45 @@ function RequestReleaseAction({
         {busy ? 'Judging…' : 'Request Release'}
       </Button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {noVerdict && (
+        <p className="mt-2 text-sm text-amber-700">
+          The transaction confirmed on-chain, but validators didn&apos;t reach a verdict this round (a known
+          GenLayer consensus timeout, not a rejection) - the engagement is unchanged. Click Request Release to try
+          again.
+        </p>
+      )}
+      {verifying && <p className="mt-2 text-sm text-ink-soft">Checking whether a verdict was actually reached...</p>}
       {hash && (
         <div className="mt-3">
           <TxStatus
             hash={hash}
-            onSettled={(ok) => {
-              setBusy(false)
-              onSettled(ok, hash)
+            budgetMs={12 * 60 * 1000}
+            onSettled={async (ok) => {
+              if (!ok) {
+                setBusy(false)
+                onSettled(false, hash)
+                return
+              }
+              // A confirmed receipt alone doesn't guarantee a verdict was
+              // reached - GenVM can finalize a round with no decision (e.g.
+              // a leader timeout) without the receipt itself signaling
+              // failure. decision_reasoning is always overwritten the
+              // instant a real verdict lands, so compare it against what it
+              // was right before this attempt rather than trusting the
+              // receipt in isolation.
+              setVerifying(true)
+              try {
+                const fresh = await getEngagement(engagementId)
+                const verdictReached = fresh.decision_reasoning !== previousReasoning
+                setNoVerdict(!verdictReached)
+                setBusy(false)
+                onSettled(verdictReached, hash)
+              } catch {
+                setBusy(false)
+                onSettled(true, hash)
+              } finally {
+                setVerifying(false)
+              }
             }}
           />
         </div>
